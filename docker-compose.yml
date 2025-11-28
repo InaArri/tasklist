@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: taskflow-db
+    environment:
+      POSTGRES_DB: taskflow
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - taskflow-network
+
+  backend:
+    build: .
+    container_name: taskflow-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: taskflow
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      PORT: 3000
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-this-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+    expose:
+      - "3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm start
+    networks:
+      - taskflow-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: taskflow-nginx
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./:/app:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    networks:
+      - taskflow-network
+    restart: unless-stopped
+
+  # Certbot for SSL certificate management (optional, run manually)
+  certbot:
+    image: certbot/certbot
+    container_name: taskflow-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    profiles:
+      - certbot
+
+networks:
+  taskflow-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

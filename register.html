@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Register for TaskFlow - Your Personal Task Manager">
+    <title>Register - TaskFlow</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1 class="auth-title">
+                    <span class="title-icon">✓</span>
+                    TaskFlow
+                </h1>
+                <p class="auth-subtitle">Create your account to get started.</p>
+            </div>
+
+            <form id="register-form" class="auth-form">
+                <div class="form-group">
+                    <label for="name" class="form-label">Name</label>
+                    <input type="text" id="name" class="form-input" placeholder="Your name" required
+                        autocomplete="name">
+                </div>
+
+                <div class="form-group">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" id="email" class="form-input" placeholder="you@example.com" required
+                        autocomplete="email">
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" id="password" class="form-input" placeholder="At least 6 characters" required
+                        minlength="6" autocomplete="new-password">
+                </div>
+
+                <div class="form-group">
+                    <label for="confirm-password" class="form-label">Confirm Password</label>
+                    <input type="password" id="confirm-password" class="form-input" placeholder="Confirm your password"
+                        required minlength="6" autocomplete="new-password">
+                </div>
+
+                <div id="error-message" class="error-message" style="display: none;"></div>
+
+                <button type="submit" id="register-btn" class="auth-btn">
+                    <span class="btn-text">Create Account</span>
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <p>Already have an account? <a href="login.html" class="auth-link">Login here</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+    <script>
+        const registerForm = document.getElementById('register-form');
+        const registerBtn = document.getElementById('register-btn');
+        const errorMessage = document.getElementById('error-message');
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            // Validate passwords match
+            if (password !== confirmPassword) {
+                errorMessage.textContent = 'Passwords do not match';
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            try {
+                registerBtn.disabled = true;
+                registerBtn.innerHTML = '<span class="btn-text">Creating...</span>';
+
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name, email, password }),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Registration failed');
+                }
+
+                // Store token and user info
+                localStorage.setItem('taskflow-token', data.token);
+                localStorage.setItem('taskflow-user', JSON.stringify(data.user));
+
+                // Redirect to main app
+                window.location.href = 'index.html';
+            } catch (error) {
+                errorMessage.textContent = error.message;
+                errorMessage.style.display = 'block';
+                registerBtn.disabled = false;
+                registerBtn.innerHTML = '<span class="btn-text">Create Account</span>';
+            }
+        });
+
+        // Check if already logged in
+        if (localStorage.getItem('taskflow-token')) {
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+
+</html>

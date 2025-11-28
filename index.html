@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="A beautiful and intuitive task list application to organize your daily tasks efficiently">
+    <title>TaskFlow - Your Personal Task Manager</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-top">
+                <div class="header-content">
+                    <h1 class="app-title">
+                        <span class="title-icon">✓</span>
+                        TaskFlow
+                    </h1>
+                    <p class="app-subtitle">Organize your life, one task at a time</p>
+                </div>
+                <div class="user-profile">
+                    <div class="user-info">
+                        <span class="user-name" id="user-name">Loading...</span>
+                        <span class="user-email" id="user-email"></span>
+                    </div>
+                    <button id="logout-btn" class="logout-btn">Logout</button>
+                </div>
+            </div>
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-value" id="total-tasks">0</div>
+                    <div class="stat-label">Total Tasks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="completed-tasks">0</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="pending-tasks">0</div>
+                    <div class="stat-label">Pending</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="input-section">
+                <div class="input-wrapper">
+                    <input type="text" id="task-input" class="task-input" placeholder="What needs to be done?"
+                        autocomplete="off">
+                    <button id="add-task-btn" class="add-btn">
+                        <span class="btn-text">Add Task</span>
+                        <span class="btn-icon">+</span>
+                    </button>
+                </div>
+                <div class="filter-section">
+                    <button class="filter-btn active" data-filter="all">All</button>
+                    <button class="filter-btn" data-filter="active">Active</button>
+                    <button class="filter-btn" data-filter="completed">Completed</button>
+                </div>
+            </div>
+
+            <div class="tasks-section">
+                <div id="empty-state" class="empty-state">
+                    <div class="empty-icon">📝</div>
+                    <h2>No tasks yet</h2>
+                    <p>Add your first task to get started!</p>
+                </div>
+                <ul id="task-list" class="task-list"></ul>
+            </div>
+
+            <div class="footer-actions">
+                <button id="clear-completed-btn" class="clear-btn">Clear Completed</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>

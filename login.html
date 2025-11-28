@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Login to TaskFlow - Your Personal Task Manager">
+    <title>Login - TaskFlow</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1 class="auth-title">
+                    <span class="title-icon">✓</span>
+                    TaskFlow
+                </h1>
+                <p class="auth-subtitle">Welcome back! Please login to your account.</p>
+            </div>
+
+            <form id="login-form" class="auth-form">
+                <div class="form-group">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" id="email" class="form-input" placeholder="you@example.com" required
+                        autocomplete="email">
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" id="password" class="form-input" placeholder="Enter your password" required
+                        autocomplete="current-password">
+                </div>
+
+                <div id="error-message" class="error-message" style="display: none;"></div>
+
+                <button type="submit" id="login-btn" class="auth-btn">
+                    <span class="btn-text">Login</span>
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <p>Don't have an account? <a href="register.html" class="auth-link">Register here</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+    <script>
+        const loginForm = document.getElementById('login-form');
+    </script>
+</body>
+
+</html>
