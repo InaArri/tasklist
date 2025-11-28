@@ -372,4 +372,6 @@ style.textContent = `
 document.head.appendChild(style);
 
 // ===== Initialize on DOM Load =====
-init();
+document.addEventListener('DOMContentLoaded', () => {
+    init();
+});
