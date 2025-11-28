@@ -4,9 +4,12 @@ const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
+const http = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const server = http.createServer(app);
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
@@ -35,6 +38,43 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.static('.')); // Serve static files (HTML, CSS, JS)
+
+// ===== Socket.IO setup =====
+const io = new Server(server, {
+    cors: {
+        origin: allowedOrigins,
+        methods: ['GET', 'POST'],
+        credentials: true
+    }
+});
+
+io.on('connection', (socket) => {
+    console.log('Socket connected:', socket.id);
+
+    socket.on('authenticate', (data) => {
+        const token = data && data.token;
+        if (!token) {
+            socket.emit('unauthorized');
+            return;
+        }
+
+        jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-this', (err, user) => {
+            if (err) {
+                socket.emit('unauthorized');
+                return;
+            }
+            const userId = user.userId;
+            socket.join(`user:${userId}`);
+            socket.userId = userId;
+            socket.emit('authenticated');
+            console.log(`Socket ${socket.id} authenticated for user ${userId}`);
+        });
+    });
+
+    socket.on('disconnect', (reason) => {
+        console.log('Socket disconnected:', socket.id, reason);
+    });
+});
 
 // PostgreSQL connection pool
 const pool = new Pool({
@@ -233,7 +273,14 @@ app.post('/api/tasks', authenticateToken, async (req, res) => {
             'INSERT INTO tasks (user_id, text, completed, created_at) VALUES ($1, $2, $3, $4) RETURNING *',
             [req.user.userId, text.trim(), false, new Date()]
         );
-        res.status(201).json(result.rows[0]);
+        const newTask = result.rows[0];
+        // Emit to sockets subscribed to this user
+        try {
+            io.to(`user:${req.user.userId}`).emit('taskCreated', newTask);
+        } catch (e) {
+            console.warn('Failed to emit socket event for taskCreated', e);
+        }
+        res.status(201).json(newTask);
     } catch (error) {
         console.error('Error creating task:', error);
         res.status(500).json({ error: 'Failed to create task' });
@@ -259,7 +306,13 @@ app.put('/api/tasks/:id', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'Task not found' });
         }
 
-        res.json(result.rows[0]);
+        const updatedTask = result.rows[0];
+        try {
+            io.to(`user:${req.user.userId}`).emit('taskUpdated', updatedTask);
+        } catch (e) {
+            console.warn('Failed to emit socket event for taskUpdated', e);
+        }
+        res.json(updatedTask);
     } catch (error) {
         console.error('Error updating task:', error);
         res.status(500).json({ error: 'Failed to update task' });
@@ -280,7 +333,13 @@ app.delete('/api/tasks/:id', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'Task not found' });
         }
 
-        res.json({ message: 'Task deleted successfully', task: result.rows[0] });
+        const deleted = result.rows[0];
+        try {
+            io.to(`user:${req.user.userId}`).emit('taskDeleted', { id: deleted.id });
+        } catch (e) {
+            console.warn('Failed to emit socket event for taskDeleted', e);
+        }
+        res.json({ message: 'Task deleted successfully', task: deleted });
     } catch (error) {
         console.error('Error deleting task:', error);
         res.status(500).json({ error: 'Failed to delete task' });
@@ -298,7 +357,7 @@ app.get('/api/health', async (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`📊 API available at http://localhost:${PORT}/api/tasks`);
     console.log(`🔐 Auth endpoints: /api/auth/register, /api/auth/login`);

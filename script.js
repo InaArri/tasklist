@@ -7,6 +7,7 @@ let tasks = [];
 let currentFilter = 'all';
 let isLoading = false;
 let currentUser = null;
+let socket = null;
 
 // ===== DOM Elements =====
 const taskInput = document.getElementById('task-input');
@@ -34,6 +35,60 @@ async function init() {
     if (currentUser) {
         userNameEl.textContent = currentUser.name;
         userEmailEl.textContent = currentUser.email;
+    }
+
+    // Initialize Socket.IO connection and authenticate
+    try {
+        if (typeof io !== 'undefined') {
+            socket = io();
+
+            socket.on('connect', () => {
+                // Send token for authentication over the socket
+                try {
+                    socket.emit('authenticate', { token: getToken() });
+                } catch (e) {
+                    console.warn('Socket authenticate emit failed', e);
+                }
+            });
+
+            socket.on('authenticated', () => {
+                console.log('Socket authenticated');
+            });
+
+            socket.on('unauthorized', () => {
+                console.warn('Socket unauthorized - invalid token');
+            });
+
+            socket.on('taskCreated', (task) => {
+                if (!currentUser || task.user_id !== currentUser.id) return;
+                if (tasks.find(t => t.id === task.id)) return; // avoid duplicates
+                tasks.unshift({ ...task, createdAt: task.created_at });
+                renderTasks();
+                updateStats();
+            });
+
+            socket.on('taskUpdated', (task) => {
+                if (!currentUser || task.user_id !== currentUser.id) return;
+                const idx = tasks.findIndex(t => t.id === task.id);
+                const normalized = { ...task, createdAt: task.created_at };
+                if (idx === -1) {
+                    tasks.unshift(normalized);
+                } else {
+                    tasks[idx] = { ...tasks[idx], ...normalized };
+                }
+                renderTasks();
+                updateStats();
+            });
+
+            socket.on('taskDeleted', (payload) => {
+                const id = payload && payload.id ? payload.id : payload;
+                tasks = tasks.filter(t => t.id !== id);
+                renderTasks();
+                updateStats();
+            });
+        }
+    } catch (err) {
+        console.warn('Socket.IO initialization failed', err);
     }
 
     await loadTasksFromAPI();
