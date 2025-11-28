@@ -25,44 +25,15 @@ http {
         server backend:3000;
     }
 
-    # HTTP server - redirects to HTTPS and allows Let's Encrypt validation
+    # HTTP server - serves on port 80
     server {
         listen 80;
-        server_name ignaciodev.xyz www.ignaciodev.xyz api.ignaciodev.xyz;
+        server_name _;  # Accept any domain
         
         # Allow Let's Encrypt certificate validation
         location /.well-known/acme-challenge/ {
             root /var/www/certbot;
         }
-
-        # Redirect all other traffic to HTTPS
-        location / {
-            return 301 https://$host$request_uri;
-        }
-    }
-
-    # HTTPS server for main domain (ignaciodev.xyz)
-    server {
-        listen 443 ssl;
-        http2 on;
-        server_name ignaciodev.xyz;
-
-        # SSL certificates (Let's Encrypt)
-        ssl_certificate /etc/letsencrypt/live/ignaciodev.xyz/fullchain.pem;
-        ssl_certificate_key /etc/letsencrypt/live/ignaciodev.xyz/privkey.pem;
-        
-        # SSL configuration
-        ssl_protocols TLSv1.2 TLSv1.3;
-        ssl_ciphers HIGH:!aNULL:!MD5;
-        ssl_prefer_server_ciphers on;
-        ssl_session_cache shared:SSL:10m;
-        ssl_session_timeout 10m;
-
-        # Security headers
-        add_header X-Frame-Options "SAMEORIGIN" always;
-        add_header X-Content-Type-Options "nosniff" always;
-        add_header X-XSS-Protection "1; mode=block" always;
-        add_header Referrer-Policy "no-referrer-when-downgrade" always;
 
         # TaskFlow application
         location / {
@@ -100,25 +71,22 @@ http {
         }
     }
 
-    # HTTPS server for www subdomain
+    # HTTPS server - serves HTTP content on port 443 (temporary, until SSL certs are obtained)
+    # This allows browsers that try HTTPS first to still access the site
     server {
         listen 443 ssl;
         http2 on;
-        server_name www.ignaciodev.xyz;
+        server_name _;
 
-        # SSL certificates
-        ssl_certificate /etc/letsencrypt/live/ignaciodev.xyz/fullchain.pem;
-        ssl_certificate_key /etc/letsencrypt/live/ignaciodev.xyz/privkey.pem;
+        # Use self-signed certificate (temporary - browsers will show warning)
+        # Generate with: openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /path/to/key.pem -out /path/to/cert.pem
+        ssl_certificate /etc/nginx/ssl/cert.pem;
+        ssl_certificate_key /etc/nginx/ssl/key.pem;
         
         # SSL configuration
         ssl_protocols TLSv1.2 TLSv1.3;
         ssl_ciphers HIGH:!aNULL:!MD5;
         ssl_prefer_server_ciphers on;
-
-        # Security headers
-        add_header X-Frame-Options "SAMEORIGIN" always;
-        add_header X-Content-Type-Options "nosniff" always;
-        add_header X-XSS-Protection "1; mode=block" always;
 
         # TaskFlow application
         location / {
@@ -126,6 +94,7 @@ http {
             try_files $uri $uri/ /index.html;
             index index.html;
 
+            # Cache static assets
             location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
                 expires 1y;
                 add_header Cache-Control "public, immutable";
@@ -146,52 +115,6 @@ http {
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_cache_bypass $http_upgrade;
         }
-    }
-
-    # HTTPS server for API subdomain
-    server {
-        listen 443 ssl;
-        http2 on;
-        server_name api.ignaciodev.xyz;
-
-        # SSL certificates
-        ssl_certificate /etc/letsencrypt/live/ignaciodev.xyz/fullchain.pem;
-        ssl_certificate_key /etc/letsencrypt/live/ignaciodev.xyz/privkey.pem;
-        
-        # SSL configuration
-        ssl_protocols TLSv1.2 TLSv1.3;
-        ssl_ciphers HIGH:!aNULL:!MD5;
-        ssl_prefer_server_ciphers on;
-
-        # Security headers
-        add_header X-Frame-Options "SAMEORIGIN" always;
-        add_header X-Content-Type-Options "nosniff" always;
-        add_header X-XSS-Protection "1; mode=block" always;
-
-        # API endpoints
-        location /api {
-            # Rate limiting for API
-            limit_req zone=api_limit burst=20 nodelay;
-            
-            # Special rate limiting for auth endpoints
-            location ~ ^/api/auth/(login|register) {
-                limit_req zone=auth_limit burst=5 nodelay;
-                
-                proxy_pass http://taskflow_backend;
-                proxy_http_version 1.1;
-                proxy_set_header Host $host;
-                proxy_set_header X-Real-IP $remote_addr;
-                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                proxy_set_header X-Forwarded-Proto $scheme;
-            }
-            
-            proxy_pass http://taskflow_backend;
-            proxy_http_version 1.1;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
 
         # Health check endpoint
         location /health {
@@ -201,3 +124,4 @@ http {
         }
     }
 }
+
