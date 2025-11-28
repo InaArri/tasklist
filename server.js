@@ -5,7 +5,13 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const http = require('http');
-const { Server } = require('socket.io');
+let Server = null;
+try {
+    // Try to load socket.io if installed
+    Server = require('socket.io').Server;
+} catch (e) {
+    console.warn('socket.io not installed or failed to load. Real-time updates will be disabled.');
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -39,42 +45,47 @@ app.use(cors({
 app.use(express.json());
 app.use(express.static('.')); // Serve static files (HTML, CSS, JS)
 
-// ===== Socket.IO setup =====
-const io = new Server(server, {
-    cors: {
-        origin: allowedOrigins,
-        methods: ['GET', 'POST'],
-        credentials: true
-    }
-});
-
-io.on('connection', (socket) => {
-    console.log('Socket connected:', socket.id);
-
-    socket.on('authenticate', (data) => {
-        const token = data && data.token;
-        if (!token) {
-            socket.emit('unauthorized');
-            return;
+// ===== Socket.IO setup (optional) =====
+let io = null;
+if (Server) {
+    io = new Server(server, {
+        cors: {
+            origin: allowedOrigins,
+            methods: ['GET', 'POST'],
+            credentials: true
         }
+    });
 
-        jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-this', (err, user) => {
-            if (err) {
+    io.on('connection', (socket) => {
+        console.log('Socket connected:', socket.id);
+
+        socket.on('authenticate', (data) => {
+            const token = data && data.token;
+            if (!token) {
                 socket.emit('unauthorized');
                 return;
             }
-            const userId = user.userId;
-            socket.join(`user:${userId}`);
-            socket.userId = userId;
-            socket.emit('authenticated');
-            console.log(`Socket ${socket.id} authenticated for user ${userId}`);
+
+            jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-this', (err, user) => {
+                if (err) {
+                    socket.emit('unauthorized');
+                    return;
+                }
+                const userId = user.userId;
+                socket.join(`user:${userId}`);
+                socket.userId = userId;
+                socket.emit('authenticated');
+                console.log(`Socket ${socket.id} authenticated for user ${userId}`);
+            });
+        });
+
+        socket.on('disconnect', (reason) => {
+            console.log('Socket disconnected:', socket.id, reason);
         });
     });
-
-    socket.on('disconnect', (reason) => {
-        console.log('Socket disconnected:', socket.id, reason);
-    });
-});
+} else {
+    console.log('Socket.IO disabled — server will continue without real-time updates.');
+}
 
 // PostgreSQL connection pool
 const pool = new Pool({
