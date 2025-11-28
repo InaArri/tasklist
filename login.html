@@ -52,6 +52,51 @@
     <script src="auth.js"></script>
     <script>
         const loginForm = document.getElementById('login-form');
+        const loginBtn = document.getElementById('login-btn');
+        const errorMessage = document.getElementById('error-message');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                loginBtn.disabled = true;
+                loginBtn.innerHTML = '<span class="btn-text">Logging in...</span>';
+
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password }),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Login failed');
+                }
+
+                // Store token and user info
+                localStorage.setItem('taskflow-token', data.token);
+                localStorage.setItem('taskflow-user', JSON.stringify(data.user));
+
+                // Redirect to main app
+                window.location.href = 'index.html';
+            } catch (error) {
+                errorMessage.textContent = error.message;
+                errorMessage.style.display = 'block';
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '<span class="btn-text">Login</span>';
+            }
+        });
+
+        // Check if already logged in
+        if (localStorage.getItem('taskflow-token')) {
+            window.location.href = 'index.html';
+        }
     </script>
 </body>
 

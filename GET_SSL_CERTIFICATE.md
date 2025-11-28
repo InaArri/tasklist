@@ -5,33 +5,30 @@ Follow these steps to get SSL certificates and make HTTPS work.
 ## Prerequisites
 
 ✅ Domain `ignaciodev.xyz` points to your server IP  
-✅ Ports 80 and 443 are open  
+✅ DNS access to add TXT records  
 ✅ DNS records configured (may take a few hours to propagate)
 
-## Step 1: Create Certbot Directories
+## Method 1: DNS Challenge (Recommended - No HTTP Required)
+
+This method doesn't require HTTP access or stopping nginx.
+
+### Step 1: Create Certbot Directories
 
 ```bash
 cd ~/taskflow
-mkdir -p certbot/conf certbot/www
+mkdir -p certbot/conf
 ```
 
-## Step 2: Stop Nginx (Temporarily)
-
-```bash
-docker-compose stop nginx
-```
-
-## Step 3: Get SSL Certificate
+### Step 2: Get Certificate with DNS Challenge
 
 **Replace `your-email@example.com` with your actual email:**
 
 ```bash
 docker run -it --rm \
   -v $(pwd)/certbot/conf:/etc/letsencrypt \
-  -v $(pwd)/certbot/www:/var/www/certbot \
   certbot/certbot certonly \
-  --webroot \
-  --webroot-path=/var/www/certbot \
+  --manual \
+  --preferred-challenges dns \
   --email your-email@example.com \
   --agree-tos \
   --no-eff-email \
@@ -40,7 +37,25 @@ docker run -it --rm \
   -d api.ignaciodev.xyz
 ```
 
-**Important:** Use your real email address - Let's Encrypt will send renewal reminders.
+### Step 3: Add DNS TXT Records
+
+Certbot will show you TXT records to add. For each domain, add:
+
+- `_acme-challenge.ignaciodev.xyz` → `[value from certbot]`
+- `_acme-challenge.www.ignaciodev.xyz` → `[value from certbot]`
+- `_acme-challenge.api.ignaciodev.xyz` → `[value from certbot]`
+
+**Wait 1-5 minutes for DNS propagation**, then press Enter in certbot.
+
+### Step 4: Start Nginx
+
+```bash
+docker-compose up -d
+```
+
+## Method 2: HTTP Challenge (Alternative)
+
+If you prefer HTTP challenge, see `GET_CERT_WITH_NGINX.md` for instructions.
 
 ## Step 4: Start Nginx with HTTPS Config
 
