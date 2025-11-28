@@ -74,9 +74,20 @@ JWT_EXPIRES_IN=7d
 ```
 
 **Generate a secure JWT secret:**
+
+On Windows:
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
+
+On Linux/Mac:
 ```bash
 openssl rand -base64 32
+# OR
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
+
+See `JWT_SECRET_GUIDE.md` for more methods and details.
 
 ## Step 4: Update Docker Compose for Production
 

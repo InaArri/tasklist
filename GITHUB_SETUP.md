@@ -74,7 +74,8 @@ cp .env.example .env
 nano .env
 # Update:
 #   - DB_PASSWORD (use a strong password)
-#   - JWT_SECRET (generate with: openssl rand -base64 32)
+#   - JWT_SECRET (generate with: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))")
+#   See JWT_SECRET_GUIDE.md for more methods
 
 # Start the application
 docker-compose up -d
