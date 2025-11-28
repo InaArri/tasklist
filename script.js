@@ -371,7 +371,35 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+// ===== Polling for real-time updates =====
+let pollingInterval = null;
+
+function startPolling() {
+    // Poll every 3 seconds for updates
+    pollingInterval = setInterval(async () => {
+        await loadTasksFromAPI();
+        renderTasks();
+        updateStats();
+    }, 3000);
+}
+
+function stopPolling() {
+    if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+    }
+}
+
 // ===== Initialize on DOM Load =====
 document.addEventListener('DOMContentLoaded', () => {
     init();
+    startPolling(); // Start polling for updates
+});
+
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        stopPolling();
+    } else {
+        startPolling();
+    }
 });
