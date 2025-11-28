@@ -1,9 +1,6 @@
 // ===== Configuration =====
-// Use production API URL if on production domain, otherwise use local
-const isProduction = window.location.hostname.includes('ignaciodev.xyz');
-const API_BASE_URL = isProduction
-    ? 'https://api.ignaciodev.xyz/tasklist/api'
-    : 'http://localhost:3000/api';
+// Use relative API paths - works for both local and production
+const API_BASE_URL = '/api';
 
 // ===== State Management =====
 let tasks = [];
